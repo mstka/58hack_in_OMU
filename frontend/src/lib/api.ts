@@ -53,3 +53,30 @@ export async function searchSpots(
   const data: SpotSearchResponse = await res.json();
   return data.spots;
 }
+
+// ---- レビュー・フォト対象スポット一覧 (GET /reviews/spots) ----
+
+export interface ReviewSpot {
+  spotId: string;
+  name: string;
+  imageUrl: string;
+  reviewRating: number;
+  totalReviews: number;
+  totalPhotos: number;
+}
+
+interface ReviewSpotsResponse {
+  reviewSpots: ReviewSpot[];
+}
+
+export async function getReviewSpots(): Promise<ReviewSpot[]> {
+  const token = getAccessToken();
+  const res = await fetch(`${API_URL}/reviews/spots`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    throw new Error(`スポット一覧の取得に失敗しました (${res.status})`);
+  }
+  const data: ReviewSpotsResponse = await res.json();
+  return data.reviewSpots;
+}

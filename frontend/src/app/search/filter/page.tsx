@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { GENRES } from "@/lib/genres";
-import { searchSpots, type Spot, type SpotSearchFilters } from "@/lib/api";
+import { type SpotSearchFilters } from "@/lib/api";
 
 type FilterState = SpotSearchFilters;
 
@@ -20,27 +21,6 @@ const REVIEW_OPTIONS = [
   { value: "2.0-below", label: "☆2.0以下", minReview: 0 },
 ];
 
-const MOCK_SPOTS: Spot[] = [
-  {
-    spotId: "spt_001",
-    name: "リバーサイドカフェ中之島",
-    category: "カフェ",
-    latitude: 34.6925,
-    longitude: 135.5021,
-    congestionStatus: "空いている",
-    reviewRating: 4.5,
-  },
-  {
-    spotId: "spt_002",
-    name: "難波テラスコーヒー",
-    category: "カフェ",
-    latitude: 34.6655,
-    longitude: 135.5015,
-    congestionStatus: "少し空き",
-    reviewRating: 3.8,
-  },
-];
-
 function allChecked(selected: string[], options: string[]): boolean {
   return options.every((v) => selected.includes(v));
 }
@@ -51,14 +31,12 @@ function toggleAll(selected: string[], options: string[]): string[] {
 }
 
 export default function FilterPage(): React.JSX.Element {
+  const router = useRouter();
   const [filters, setFilters] = useState<FilterState>({
     congestion: [],
     genres: [],
     reviews: [],
   });
-  const [results, setResults] = useState<Spot[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [usedMock, setUsedMock] = useState(false);
 
   const handleCongestionChange = (value: string): void => {
     setFilters((prev) => ({
@@ -87,19 +65,14 @@ export default function FilterPage(): React.JSX.Element {
     }));
   };
 
-  const handleFilter = async (): Promise<void> => {
-    setLoading(true);
-    setUsedMock(false);
-    try {
-      const spots = await searchSpots(filters);
-      setResults(spots);
-    } catch {
-      // バックエンド未実装時のフォールバック（デモ用モック）
-      setResults(MOCK_SPOTS);
-      setUsedMock(true);
-    } finally {
-      setLoading(false);
-    }
+  const handleFilter = (): void => {
+    // 絞り込み条件をクエリに乗せて結果ページへ遷移
+    const params = new URLSearchParams();
+    filters.congestion.forEach((v) => params.append("congestion", v));
+    filters.genres.forEach((v) => params.append("genre", v));
+    filters.reviews.forEach((v) => params.append("review", v));
+    const query = params.toString();
+    router.push(query ? `/search-results?${query}` : "/search-results");
   };
 
   const congestionValues = CONGESTION_OPTIONS.map((o) => o.value);
@@ -220,52 +193,14 @@ export default function FilterPage(): React.JSX.Element {
         </div>
 
         {/* Filter Button */}
-        <div className="mt-8">
+        <div className="mt-8 pb-8">
           <button
             onClick={handleFilter}
-            disabled={loading}
-            className="w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 disabled:opacity-60 text-white font-semibold py-3 px-6 rounded-full transition-colors duration-200"
+            className="w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-semibold py-3 px-6 rounded-full transition-colors duration-200"
           >
-            {loading ? "検索中..." : "この条件で絞り込む >"}
+            この条件で絞り込む &gt;
           </button>
         </div>
-
-        {/* Results */}
-        {results !== null && (
-          <section className="mt-6 pb-8">
-            {usedMock && (
-              <p className="mb-3 text-xs text-amber-600">
-                ※ バックエンド未接続のためモックデータを表示しています
-              </p>
-            )}
-            {results.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-6">
-                条件に一致するスポットがありません
-              </p>
-            ) : (
-              <ul className="space-y-3">
-                {results.map((spot) => (
-                  <li
-                    key={spot.spotId}
-                    className="bg-white rounded-2xl px-4 py-3 border border-gray-100 shadow-sm"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-gray-900">{spot.name}</span>
-                      <span className="text-sm text-amber-500">
-                        ☆ {spot.reviewRating.toFixed(1)}
-                      </span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
-                      <span>{spot.category}</span>
-                      <span>·</span>
-                      <span>{spot.congestionStatus}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        )}
       </main>
     </div>
   );
