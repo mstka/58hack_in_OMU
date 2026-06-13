@@ -87,3 +87,35 @@ export async function purchaseCoins(
   }
   return res.json();
 }
+
+// ---- 決済結果取得 (GET /billing/payments/{paymentId}) ----
+
+export interface PaymentResult {
+  paymentId: string;
+  status: string;
+  addedCoins: number;
+  currentTotalCoins: number;
+}
+
+export async function getPaymentResult(
+  paymentId: string
+): Promise<PaymentResult> {
+  const token = getAccessToken();
+  const res = await fetch(
+    `${API_URL}/billing/payments/${encodeURIComponent(paymentId)}`,
+    {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }
+  );
+  if (!res.ok) {
+    let message = `決済結果の取得に失敗しました (${res.status})`;
+    try {
+      const body = await res.json();
+      if (body?.error?.message) message = body.error.message;
+    } catch {
+      // ignore parse error
+    }
+    throw new Error(message);
+  }
+  return res.json();
+}
