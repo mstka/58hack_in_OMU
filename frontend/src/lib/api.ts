@@ -119,3 +119,57 @@ export async function getPaymentResult(
   }
   return res.json();
 }
+
+// ---- 決済画面データ取得 (GET /payment/display) ----
+
+export interface SelectedCoupon {
+  couponId: string;
+  title: string;
+  expiryDate: string;
+  qrCodeUrl: string;
+}
+
+export interface PaymentDisplay {
+  accountName: string;
+  qrCodeUrl: string;
+  selectedCoupon: SelectedCoupon;
+}
+
+export interface ApiError extends Error {
+  code: string;
+  status: number;
+}
+
+export async function getPaymentDisplay(
+  couponId: string
+): Promise<PaymentDisplay> {
+  const token = getAccessToken();
+  const res = await fetch(
+    `${API_URL}/payment/display?couponId=${encodeURIComponent(couponId)}`,
+    {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }
+  );
+  if (!res.ok) {
+    let message = `決済画面の取得に失敗しました (${res.status})`;
+    let code = "";
+    try {
+      const body = await res.json();
+      // この API は { "error": "CODE", "message": "..." } 形式
+      if (typeof body?.error === "string") {
+        code = body.error;
+        message = body.message ?? message;
+      } else if (body?.error?.message) {
+        code = body.error.code ?? "";
+        message = body.error.message;
+      }
+    } catch {
+      // ignore parse error
+    }
+    const err = new Error(message) as ApiError;
+    err.code = code;
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
